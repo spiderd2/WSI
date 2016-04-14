@@ -1,0 +1,351 @@
+<html>
+<head>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<!-- Latest compiled JavaScript -->
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<title>Chat with socket.io and node.js</title>
+
+	<link rel="stylesheet" type="text/css" href="css/mystyle.css">
+
+</head>
+
+<button type="button" id="testSocketa" class="btn btn-warning">Wyslij do konsoli</button>
+<div id="memory_board"  style="display: none;"></div>
+<div id="ekranPowitalny">
+<!-------------------------------EKRAN POWITALNY-->
+	<button type="button" class="btn btn-primary doEkranuLogowania">Zaloguj</button>
+    <button type="button" class="btn btn-primary doEkranuRejestracji">Zarejestruj</button>
+</div>
+<div id="ekranRejestracji">	<!-------------------------------EKRAN REJESTRACJI-->
+	<form id="formRejestracji">
+   	 	<label for="nick">Nick:</label>
+    	<br>
+    	<input id="RejestracjaNick" type="text" maxlength="50" autocomplete="off" name="nick" required>
+    	<br>
+    	<label for="haslo">Haslo:</label>
+    	<br>
+    	<input id="pass" type="password" autocomplete="off"  name="haslo" required>
+    	<br>
+    	<label for="haslo">Powtorz haslo:</label>
+    	<br>
+    	<input id="pass1" autocomplete="off" type="password" name="haslo" onkeyup="checkPass(); return false" required>
+        <br>
+    	<span style="color:#F00" id="confirmMessage" class="confirmMessage"></span>        
+        <br>        
+    	<input  type="submit" value="Zarejestruj">
+    </form>
+    <br>
+    <button type="button" class="btn btn-primary doEkranuPowitalnego">Cofnij</button>
+</div>
+
+<div id="ekranLogowania">	<!-------------------------------EKRAN LOGOWANIA-->
+	<form id="formLogowania">
+   	 	<label for="nick">Nick:</label>
+    	<br>
+    	<input id="LogowanieNick" type="text" maxlength="50" autocomplete="off" name="nick" required>
+    	<br>
+    	<label for="haslo">Haslo:</label>
+    	<br>
+    	<input id="LogowaniePass" type="password" autocomplete="off"  name="haslo" required>
+    	<br>
+    	<span style="color:#F00" id="logowanieMessage" class="confirmMessage"></span>        
+        <br>        
+    	<input  type="submit" value="Zaloguj">
+    </form>
+    <br>
+    <button type="button" class="btn btn-primary doEkranuPowitalnego">Cofnij</button>
+</div>
+
+<body>
+	<div id="nickWrap">	<!---------------------Logowanie------->
+		<p>Enter a username:</p>
+		<p id="nickError"></p>
+		<form id="setNick">
+			<input size="35" id="nickname"></input>
+			<input type="submit"></input>
+		</form>
+	</div>
+
+	<div id="contentWrap"> <!--------------Wysylanie wiadomosci------>
+		<div id="chatWrap">
+			<div id="chat"></div>
+			<form id="send-message">
+				<input size="35" id="message"></input>
+				<input type="submit"></input>
+			</form>
+		</div>
+		<div id="users"></div>
+	</div>
+	<!--
+    <div id="powiadomienie"><!-----------------wysylanie powiadomienia do konkretnej osoby----->
+	<!--	<form id="play-request">	
+			<input size="35" id="play-alert"></input>
+			<input type="submit"></input>
+		</form>
+    </div>
+    -->
+	
+	<!--script src="http://code.jquery.com/jquery-latest.min.js"></script-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script type="text/javascript" src="js/silnikGryHost.js"></script>
+	<script type="text/javascript" src="js/silnikGryGuest.js"></script>
+	<script type="text/javascript">
+
+
+
+
+		var socket = io.connect();
+		var $nickForm = $('#setNick');
+		var $nickError = $('#nickError');
+		var $nickBox = $('#nickname');
+		var $users = $('#users');
+		var $messageForm = $('#send-message');
+		var $messageBox = $('#message');
+		var $chat = $('#chat');
+		var $playForm = $('#play-request');
+		var $playName = $('#play-alert');
+		var przeciwnik;
+
+
+			$('#nickWrap').hide();
+			$('#powiadomienie').hide();
+			$('#ekranRejestracji').hide();
+			$('#ekranLogowania').hide();
+														//-----NAWGIGACJA	
+		$( ".doEkranuPowitalnego" ).click(function() {
+ 			 $('#ekranPowitalny').show();
+			 $('#ekranRejestracji').hide();
+			 $('#ekranLogowania').hide();
+		});	
+		$( ".doEkranuLogowania" ).click(function() {
+ 			 $('#ekranPowitalny').hide();
+			 $('#ekranRejestracji').hide();
+			 $('#ekranLogowania').show();
+		});	
+		$( ".doEkranuRejestracji" ).click(function() {
+ 			 $('#ekranPowitalny').hide();
+			 $('#ekranLogowania').hide();
+			 $('#ekranRejestracji').show();
+		});		
+														//NAWIGACJA END
+		
+	
+														//-----EKRAN REJESTRACJI
+		$('#formRejestracji').submit(function(e){
+				e.preventDefault();
+				socket.emit('rejestracja', {nick: $('#RejestracjaNick').val(), pass: $('#pass').val()},  function(data){
+					if(data){
+						$('#ekranRejestracji').hide();
+						$('#ekranPowitalny').show();
+						$('#formRejestracji').find("input[type=text], input[type=password]").val("");
+						alert('zarejestrowano pomyslnie');					
+					} else{
+						$('#confirmMessage').html("Nick jest zajęty");
+						$('#RejestracjaNick').val("");
+					}
+				});
+			});											
+		//sprawdzanie czy hasla sa takie same
+		function checkPass(){			
+        	var message = document.getElementById('confirmMessage');
+        	if(document.getElementById('pass').value!=document.getElementById('pass1').value){
+            	message.innerHTML = "Hasla nie sa takie same!"
+            	document.getElementById('pass1').style.backgroundImage="url(http://www.the-art-of-web.com/images/invalid.png)";
+        	}
+        	else
+       		{
+            	message.innerHTML = "";
+            	document.getElementById('pass1').style.backgroundImage="url(http://www.the-art-of-web.com/images/valid.png)";
+        	}
+   	 	}		
+														//EKRAN REJESTRACJI	END
+														//-----EKRAN LOGOWANIA
+			$('#formLogowania').submit(function(e){
+				e.preventDefault();
+				socket.emit('logowanie', {nick: $('#LogowanieNick').val(), pass: $('#LogowaniePass').val()},  function(data){
+					if(data){
+						//przejscie do pokoju z chatem
+						$('#ekranLogowania').hide();
+						$('#contentWrap').show();
+						$('#powiadomienie').show();
+
+					} else{
+						alert("cos poszlo nie tak ");
+					}
+				});
+			});											//EKRAN LOGOWANIA END	
+			
+			
+												
+			//aktualizacja listy aktywnych uzytkownikow
+			socket.on('usernames', function(data){		
+				var html = '';
+				for(i=0; i < data.length; i++){
+					html += '<button onclick="poprosOGre(\''+data[i]+'\')">'+data[i]+'</button><br/>'
+				}
+				
+				$users.html(html);
+			});
+			
+			//wysylanie wiadomosci na chacie
+			$messageForm.submit(function(e){
+				e.preventDefault();
+				socket.emit('send message', $messageBox.val(), function(data){
+					$chat.append('<span class="error">' + data + "</span><br/>");
+				});
+				$messageBox.val('');
+			});
+			
+			//odbieranie wiadomosci z chatu z serwera
+			socket.on('new message', function(data){
+				$chat.append('<span class="msg"><b>' + data.nick + ': </b>' + data.msg + "</span><br/>");
+			});
+			
+			/*
+			socket.on('whisper', function(data){
+				$chat.append('<span class="whisper"><b>' + data.nick + ': </b>' + data.msg + "</span><br/>");
+			});
+			*/
+			
+			/*
+			$playForm.submit(function(e){
+				e.preventDefault();
+				socket.emit('alert', $playName.val(), function(data){
+					alert('---'+$playName.val()+'---');
+					$chat.append('<span class="error">' + data + "</span><br/>");
+				});
+				$messageBox.val('');
+			});
+			*/
+			
+			//wysyla zaproszenie do innego gracza
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		function poprosOGre1(gracz){
+			socket.emit('zaproszenieDoGry', gracz);
+		}
+		socket.on('wyslijZaproszenieDoGracza', function(data){
+			if(confirm(data.msg))
+			{
+				socket.emit('przyjmujeGre', data.nickname);
+			}
+			else
+			{
+				socket.emit('odrzucamGre', data.nickname);
+			}
+
+		});
+
+			function poprosOGre(gracz){
+				socket.emit('alert', gracz, function(wiadomosc){
+					socket.emit('sprawdz', "5....odbieram odpowiedzi z serwera");
+					if(wiadomosc){
+						socket.emit('sprawdz',"6....powiedzial TAK");
+						$chat.append('<span class="error">ZGODA!</span><br/>');
+						newBoard();												//--------<---TU SIE ZACZYNA GRA
+						$('#memory_board').show();
+						socket.emit('sprawdz',"6,4....u HOSTa narysowwalem plansze");
+						socket.emit('wyslij plansze', {gracz: gracz, plansza: memory_array});
+
+
+					}
+					else
+					{
+						socket.emit('sprawdz',"6....powiedzial NIE");
+						$chat.append('<span class="error">BRAK ZGODY!</span><br/>');
+					}
+				});
+			}
+			
+			//wyswietla zaproszenie TAK/NIE
+			socket.on('wyswietl alert', function(data, callback){
+				socket.emit('sprawdz',"2....odbieram wyswietl alert");
+				if(confirm(data)){
+					socket.emit('sprawdz',"3....uzytkownik nacisnal OK");
+					callback(true);
+				}
+				else
+				{
+					socket.emit('sprawdz',"3....uzytkownik nacisnal ANULUJ");
+					callback(false);
+				};
+			});
+
+
+		socket.on('pobierz plansze', function(data){
+			newBoardGuest(data);
+			$('#memory_board').show();
+			//flipClickOff();
+		});
+		socket.on('odblokuj ruch', function(){
+			socket.emit('sprawdz', "---kolejny gracz flipClickOn() i twojRuch true")
+			flipClickOn();
+			twojRuch=true;
+		});
+		socket.on('zablokuj ruch', function(){
+			flipClickOff();	
+			twojRuch=false;	
+		});
+		socket.on('zmiana tury',function(){
+			flipClickOn();
+		});
+		socket.on('wyslij nazwe przeciwnika', function(data){
+			przeciwnik=	data;
+		});
+	
+		socket.on('wyslij ruch', function(data){
+			
+			flipClickOn();
+			$('#'+data).click();
+			flipClickOff();
+			socket.emit('sprawdz', "---czekajacy odebral i wykonal ruch")
+		});
+				//, function(data){
+					//$chat.append('<span class="error">' + data + "</span><br/>");
+				//});
+				
+				
+				
+				//socket.emit('alert', gracz, function(data){
+				//	alert('2prosze o gre :' +gracz);
+				//	$chat.append('<span class="error">' + data + "</span><br/>");
+				//});	
+
+			$('#testSocketa').on('click', function(){
+				socket.emit('sprawdz', memory_array);
+				
+				//socket.emit('doIndex1', "sprawdzam index");
+			});
+			
+			socket.on('test odbioru', function(data){
+			$('body').prepend("--------------"+data+"----------");
+			});
+
+
+
+		
+	</script>
+</body>
+</html>>>
