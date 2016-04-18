@@ -14,11 +14,14 @@ var connection = mysql.createConnection({
   database : 'ii292231'
 });
 
-server.listen(3000);
+app.listen(process.env.PORT || 3000, function(){
+  console.log("Express server listening on port %d in %s mode", this.address().port, app.settings.env);
+});
 app.set('port', (process.env.PORT || 3000));
 app.use('/img', express.static(__dirname + '/img'));
 app.use('/css', express.static(__dirname + '/css'));
 app.use('/js', express.static(__dirname + '/js'));
+app.use('/', express.static(__dirname + '/'));
 
 app.get('/', function(req, res){
 	res.sendfile(__dirname + '/index.html');
