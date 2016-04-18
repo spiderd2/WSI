@@ -157,6 +157,17 @@ io.sockets.on('connection', function(socket){
 		 //sprawdz czy gracz gra
 		console.log('--------przeciwnikiem poddajacego sie byl: '+socket.przeciwnik);
 		users[socket.przeciwnik].emit('przeciwnik sie poddal');	
+		var q = "UPDATE uzytkownicy SET przegrane = przegrane + 1 WHERE nick like \'"+socket.nickname+"\'";
+ 			connection.query(q, function (qe, qr) {		
+    			if (qe) { 
+					console.log("------------ERROR-------------");
+					console.log(qe); 	
+				}
+				else{
+					console.log("---------pomyslnie zapisano przegrana");	
+				}	
+			});
+		
 		if(usersInGame.hasOwnProperty(socket.nickname)){
 			delete usersInGame[socket.nickname];		//i usun go z listy grajacych
 			updateNicknames();
