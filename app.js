@@ -15,6 +15,7 @@ var connection = mysql.createConnection({
 });
 
 server.listen(3000);
+app.set('port', (process.env.PORT || 3000));
 app.use('/img', express.static(__dirname + '/img'));
 app.use('/css', express.static(__dirname + '/css'));
 app.use('/js', express.static(__dirname + '/js'));
