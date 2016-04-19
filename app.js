@@ -6,8 +6,8 @@ var express = require('express'),
 	usersInGame={};
 
 	
-var mysql      = require('mysql');
-var connection;
+//var mysql      = require('mysql');
+//var connection;
 var connectToMySQL=function(){ 
 	connection=mysql.createConnection({
   		host     : 'lamp.ii.us.edu.pl',
@@ -16,6 +16,19 @@ var connectToMySQL=function(){
   		database : 'ii292231'
 	});
 }
+
+var mysql = require('mysql');
+var pool  = mysql.createPool({
+		 host     : 'lamp.ii.us.edu.pl',
+  		user     : 'ii292231',
+ 		 password : 'Mac1234%',
+  		database : 'ii292231'
+});
+
+
+  
+
+
 server.listen(process.env.PORT || 3000, function(){
   console.log("Express server listening on port %d in %s mode", this.address().port, app.settings.env);
 });
@@ -29,14 +42,40 @@ app.get('/', function(req, res){
 	res.sendfile(__dirname + '/index.html');
 });
 
+
+
+	
+   // var sql = "SELECT id,name FROM users";
+    
+	
 //rejestracja
 io.sockets.on('connection', function(socket){
 	
 	socket.on('rejestracja', function(data, callback){		//---------rejestracja - data.nick i data.pass ; callback true jezeli mozna zarejestrowac
 	
-		 connectToMySQL();
+		 //connectToMySQL();
+		 
 		var q ="INSERT INTO `ii292231`.`uzytkownicy` (`ID`, `nick`, `pass_hash`, `wygrane`, `przegrane`, `remis`) VALUES (NULL, '"+ data.nick+"', MD5('"+data.pass+"'), '0', '0', '0');"
- 		connection.query(q, function (qe, qr) {		
+ 		
+		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, [], function(qe, qr) {
+			if (qe) { 
+				console.log("------------ERROR-------------");
+				console.log(qe); 
+				callback(false);
+			}
+			else{
+				callback(true);
+			}
+     		 connection.release(); // always put connection back in pool after last query  
+			}); 
+    	});
+		
+		
+		/*pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, function (qe, qr) {		
     		if (qe) { 
 				console.log("------------ERROR-------------");
 				console.log(qe); 
@@ -46,13 +85,44 @@ io.sockets.on('connection', function(socket){
 				callback(true);
 			}
 		});
-		connection.end();	
+		connection.end();	*/
 	});														//--------rejestracja end
 	
 	socket.on('logowanie', function(data, callback){		//--------logowanie data.nick i data.pass, callback true jezeli mozna zalogowac	
-		connectToMySQL();
-		var queryString = 'SELECT COUNT(1) AS cnt FROM uzytkownicy WHERE nick like \''+data.nick+'\' AND pass_hash like MD5(\''+data.pass+'\')'; 
-		connection.query(queryString, function (err, rows, fields) {
+		//connectToMySQL();
+		
+		
+		var q = 'SELECT COUNT(1) AS cnt FROM uzytkownicy WHERE nick like \''+data.nick+'\' AND pass_hash like MD5(\''+data.pass+'\')'; 
+		
+		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, [], function(err, rows, fields) {
+			if (err) { 
+					console.log(err);
+				}
+				else if((rows[0].cnt)==1){		//poprawnie zalogowano
+				 	if (data.nick in users){
+						callback(false);	//jezeli jest juz zalogowany(np na innej karcie)
+					} 
+					else{
+						callback(true);
+						socket.nickname = data.nick;
+						users[socket.nickname] = socket;	//users[maciek]=socket_id, do ktorego mozna sie odwolac
+						updateNicknames();
+					}
+				 }
+				 else{						//niepoprawnie zalogowano
+				 	callback(false);
+				 }
+     		 connection.release(); // always put connection back in pool after last query  
+    	});
+		});
+		
+		
+		
+		/*pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, function (err, rows, fields) {
     			if (err) { 
 					console.log(err);
 				}
@@ -71,7 +141,7 @@ io.sockets.on('connection', function(socket){
 				 	callback(false);
 				 }		 
 		});
-				connection.end();
+				connection.end();*/
 	});														//--------logowanie end
 		
 	socket.on('send message', function(data, callback){//odbieranie wyslanej wiadomosci
@@ -166,7 +236,9 @@ io.sockets.on('connection', function(socket){
 		users[socket.przeciwnik].emit('przeciwnik sie poddal');	
 		var q = "UPDATE uzytkownicy SET przegrane = przegrane + 1 WHERE nick like \'"+socket.nickname+"\'";
 		connectToMySQL();
- 			connection.query(q, function (qe, qr) {		
+ 			pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, function (qe, qr) {		
     			if (qe) { 
 					console.log("------------ERROR-------------");
 					console.log(qe); 	
@@ -175,7 +247,8 @@ io.sockets.on('connection', function(socket){
 					console.log("---------pomyslnie zapisano przegrana");	
 				}	
 			});
-			connection.end();
+			connection.release();
+			});
 		
 		if(usersInGame.hasOwnProperty(socket.nickname)){
 			delete usersInGame[socket.nickname];		//i usun go z listy grajacych
@@ -196,7 +269,9 @@ io.sockets.on('connection', function(socket){
 			
 			var q = "UPDATE uzytkownicy SET przegrane = przegrane + 1 WHERE nick like \'"+socket.nickname+"\'";
 			connectToMySQL();
- 			connection.query(q, function (qe, qr) {		
+ 			pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, function (qe, qr) {		
     			if (qe) { 
 					console.log("------------ERROR-------------");
 					console.log(qe); 	
@@ -205,7 +280,8 @@ io.sockets.on('connection', function(socket){
 					console.log("---------pomyslnie zapisano przegrana");	
 				}	
 			});
-			connection.end();
+			connection.release();
+			});
 			delete usersInGame[socket.nickname];		//i usun go z listy grajacych
 			if(usersInGame.hasOwnProperty(socket.przeciwnik)){
 				delete usersInGame[socket.przeciwnik];		//grajacego tez usun z listy grajacych
@@ -224,8 +300,28 @@ io.sockets.on('connection', function(socket){
 	
 	socket.on('wygrana', function(){
 		var q = "UPDATE uzytkownicy SET wygrane = wygrane + 1 WHERE nick like \'"+socket.nickname+"\'";
-		connectToMySQL();
- 		connection.query(q, function (qe, qr) {		
+		
+		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, [], function(qe, qr) {
+			if (qe) { 
+				console.log("------------ERROR-------------");
+				console.log(qe); 	
+			}
+			else{
+			console.log("---------pomyslnie zapisano wygrana");	
+			}
+     		 connection.release(); // always put connection back in pool after last query  
+    	});
+		});
+		
+		
+		
+		
+		/*connectToMySQL();
+ 		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, function (qe, qr) {		
     		if (qe) { 
 				console.log("------------ERROR-------------");
 				console.log(qe); 	
@@ -234,12 +330,30 @@ io.sockets.on('connection', function(socket){
 			console.log("---------pomyslnie zapisano wygrana");	
 			}
 		});	
-		connection.end();
+		connection.end();*/
 	});
 	socket.on('przegrana', function(){
 		var q = "UPDATE uzytkownicy SET przegrane = przegrane + 1 WHERE nick like \'"+socket.nickname+"\'";
-		connectToMySQL();
- 		connection.query(q, function (qe, qr) {		
+		
+		
+		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, [], function(qe, qr) {
+			if (qe) { 
+				console.log("------------ERROR-------------");
+				console.log(qe); 	
+			}
+			else{
+			console.log("---------pomyslnie zapisano przegrana");	
+			}
+     		 connection.release(); // always put connection back in pool after last query  
+    	});
+		});
+		
+		/*connectToMySQL();
+ 		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, function (qe, qr) {		
     		if (qe) { 
 				console.log("------------ERROR-------------");
 				console.log(qe); 	
@@ -247,13 +361,29 @@ io.sockets.on('connection', function(socket){
 			else{
 			console.log("---------pomyslnie zapisano przegrana");	
 			}
-		});	
+		});	*/
 		connection.end();
 	});
 	socket.on('remis', function(){
 		var q = "UPDATE uzytkownicy SET remis = remis + 1 WHERE nick like \'"+socket.nickname+"\'";
-		connectToMySQL();
- 		connection.query(q, function (qe, qr) {		
+		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, [], function(qe, qr) {
+			if (qe) { 
+				console.log("------------ERROR-------------");
+				console.log(qe); 	
+			}
+			else{
+			console.log("---------pomyslnie zapisano remis");	
+			}
+     		 connection.release(); // always put connection back in pool after last query  
+    	});
+		});
+		
+		/*connectToMySQL();
+ 		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, function (qe, qr) {		
     		if (qe) { 
 				console.log("------------ERROR-------------");
 				console.log(qe); 	
@@ -262,16 +392,31 @@ io.sockets.on('connection', function(socket){
 			console.log("---------pomyslnie zapisano remis");	
 			}
 		});	
-		connection.end();
+		connection.end();*/
 	});
 	
 	socket.on('przeslij mi ranking', function(){
-		connectToMySQL();
-			connection.query("SELECT nick, wygrane, przegrane, remis FROM `uzytkownicy` ORDER BY `uzytkownicy`.`wygrane`-`uzytkownicy`.`przegrane` DESC LIMIT 0 , 100", function(err, rows, fields) {		 		
+		//connectToMySQL();
+		var q ="SELECT nick, wygrane, przegrane, remis FROM `uzytkownicy` ORDER BY `uzytkownicy`.`wygrane`-`uzytkownicy`.`przegrane` DESC LIMIT 0 , 100";
+		pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query(q, [], function(err, rows, fields) {
+			if (err) { throw err; }
+				socket.emit('wyslij dane rankingowe', rows);
+  
+     		 connection.release(); // always put connection back in pool after last query  
+    	});
+		});
+		
+		
+		
+			/*pool.getConnection(function(err, connection) {
+    if(err) { console.log(err);}
+		connection.query("SELECT nick, wygrane, przegrane, remis FROM `uzytkownicy` ORDER BY `uzytkownicy`.`wygrane`-`uzytkownicy`.`przegrane` DESC LIMIT 0 , 100", function(err, rows, fields) {		 		
 				if (err) { throw err; }
 				socket.emit('wyslij dane rankingowe', rows);
   
 			});	
-			connection.end();	
+			connection.end();*/	
 	});	
 });
