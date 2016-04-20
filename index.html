@@ -78,7 +78,10 @@
 </div>
 
 <div id="contentWrap"> <!--------------Wysylanie wiadomosci------>
-	
+	<div id="kimJestem">
+    	<span id="nazwaUzytkownika"></span>
+        <span id="mojeStatystyki"></span>
+    </div>
 
 	<div id="chatWrap">
 		<div id="chat"></div>
@@ -193,6 +196,11 @@
 				socket.emit('logowanie', {nick: mojNick, pass: $('#LogowaniePass').val()},  function(data){
 					if(data){
 						//przejscie do pokoju z chatem
+						
+						$('#nazwaUzytkownika').html("Witaj, <b>"+mojNick+"</b>");		//wyswietlenie nazwy uzytkownika
+						socket.emit("przeslij moje dane", mojNick);
+						
+						
 						$('#ekranLogowania').hide();
 						$('#contentWrap').show();
 						$('#powiadomienie').show();
@@ -222,12 +230,14 @@
 			}
 			
 			function konczeGrac(){
+				
 						aktualnieWGrze=false;
 						socket.emit('nie jestem w grze');
 						$users.show();
 						$('#memory_board').hide();
 						$('#contentWrap').show();	
-						resize();	
+						resize();
+						socket.emit("przeslij moje dane", mojNick);	
 							
 			}
 			function poddajeSie(){
@@ -395,33 +405,7 @@
 				//$('body').prepend("--------------"+data+"----------");
 			});
 			socket.on('wyslij dane rankingowe', function(data){
-				/*<table class="table">
-  <tr>
-    <th>Poz</th>
-    <th>Pkt</th>
-    <th>Nick</th>
-    <th>W</th>
-    <th>P</th>
-    <th>R</th>
-  </tr>
-  //...tutaj
-  <tr>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-</table>*/
+	
 				var output="<table class='table'><tr><th>Poz</th><th>Pkt</th><th>Nick</th><th>W</th><th>P</th><th>R</th></tr>";
 				for (i in data) {
 						if(!isNaN(i)){
@@ -442,6 +426,17 @@
 					}
 					output+="</table>";
 					$('#tabela').html(output);
+			});
+			
+			socket.on('wyslij dane uzytkownika', function(data){	//data[i].wygrane przegrane remis
+				var punkty =data[0].wygrane-data[0].przegrane;
+				var ilegier=Number(data[0].wygrane)+Number(data[0].przegrane)+Number(data[0].remis);
+				var procwyg=Number(data[0].wygrane)/(Number(data[0].wygrane)+Number(data[0].przegrane)+Number(data[0].remis));
+				procwyg=procwyg.toFixed(2);
+				procwyg*=100;
+				var output = "	Punkty:<b> "+punkty + "</b>  Zwycięstwa: <b>"+	procwyg+"%</b>   Ilość gier: <b>"+ilegier+"</b>";
+				$('#mojeStatystyki').html(output);
+				
 			});
 
 
