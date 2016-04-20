@@ -33,7 +33,7 @@ p{
 }
 #contentWrap{
 	width: 800px;
-        height: 600px;
+        height: 650px;
 
         position:absolute; /*it can be fixed too*/
         left:0; right:0;
@@ -357,4 +357,10 @@ table#t01 th	{
     max-height: 520px;
     overflow-y: scroll;
 	    min-width: 200px;
+}
+
+#kimJestem{
+	
+	height: 30px;
+	
 }
