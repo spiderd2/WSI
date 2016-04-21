@@ -175,7 +175,7 @@ io.sockets.on('connection', function(socket){
 		console.log('--------przeciwnikiem poddajacego sie byl: '+socket.przeciwnik);
 		users[socket.przeciwnik].emit('przeciwnik sie poddal');	
 		var q = "UPDATE uzytkownicy SET przegrane = przegrane + 1 WHERE nick like \'"+socket.nickname+"\'";
-		connectToMySQL();
+		
  			pool.getConnection(function(err, connection) {
     if(err) { console.log(err);}
 		connection.query(q, function (qe, qr) {		
@@ -208,7 +208,7 @@ io.sockets.on('connection', function(socket){
 			users[socket.przeciwnik].emit('przeciwnik zrobil disconnect');
 			
 			var q = "UPDATE uzytkownicy SET przegrane = przegrane + 1 WHERE nick like \'"+socket.nickname+"\'";
-			connectToMySQL();
+			
  			pool.getConnection(function(err, connection) {
     if(err) { console.log(err);}
 		connection.query(q, function (qe, qr) {		
